@@ -1,9 +1,7 @@
-import re
+import contextvars
 import string
-from typing import Any, Callable, Dict, Optional
-
-import rstr
-
+from typing import Callable, Dict, Optional
+import os
 from guardrails.validator_base import (
     FailResult,
     PassResult,
@@ -11,61 +9,102 @@ from guardrails.validator_base import (
     Validator,
     register_validator,
 )
+from rebuff import RebuffSdk
 
 
-@register_validator(name="guardrails/regex_match", data_type="string")
-class RegexMatch(Validator):
+@register_validator(name="guardrails/detect_prompt_injection", data_type="string")
+class DetectPromptInjection(Validator):
     """Validates that a value matches a regular expression.
 
     **Key Properties**
 
     | Property                      | Description                       |
     | ----------------------------- | --------------------------------- |
-    | Name for `format` attribute   | `regex_match`                     |
     | Supported data types          | `string`                          |
     | Programmatic fix              | Generate a string that matches the regular expression |
-
-    Args:
-        regex: Str regex pattern
-        match_type: Str in {"search", "fullmatch"} for a regex search or full-match option
     """  # noqa
 
     def __init__(
         self,
-        regex: str,
-        match_type: Optional[str] = None,
+        pinecone_index: str,
+        max_heuristic_score: Optional[float] = 0.75,
+        max_vector_score: Optional[float] = 0.90,
+        max_model_score: Optional[float] = 0.90,
+        check_heuristic: Optional[bool] = True,
+        check_vector: Optional[bool] = True,
+        check_llm: Optional[bool] = True,
         on_fail: Optional[Callable] = None,
     ):
         # todo -> something forces this to be passed as kwargs and therefore xml-ized.
         # match_types = ["fullmatch", "search"]
-
-        if match_type is None:
-            match_type = "fullmatch"
-        assert match_type in [
-            "fullmatch",
-            "search",
-        ], 'match_type must be in ["fullmatch", "search"]'
-
-        super().__init__(on_fail=on_fail, match_type=match_type, regex=regex)
-        self._regex = regex
-        self._match_type = match_type
-
-    def validate(self, value: Any, metadata: Dict) -> ValidationResult:
-        p = re.compile(self._regex)
-        """Validates that value matches the provided regular expression."""
-        # Pad matching string on either side for fix
-        # example if we are performing a regex search
-        str_padding = (
-            "" if self._match_type == "fullmatch" else rstr.rstr(string.ascii_lowercase)
+        super().__init__(
+            on_fail=on_fail,
+            pinecone_index=pinecone_index,
+            max_heuristic_score=max_heuristic_score,
+            max_vector_score=max_vector_score,
+            max_model_score=max_model_score,
+            check_heuristic=check_heuristic,
+            check_vector=check_vector,
+            check_llm=check_llm,
         )
-        self._fix_str = str_padding + rstr.xeger(self._regex) + str_padding
+        self.pinecone_index = pinecone_index
+        self.max_heuristic_score = max_heuristic_score
+        self.max_vector_score = max_vector_score
+        self.max_model_score = max_model_score
+        self.check_heuristic = check_heuristic
+        self.check_vector = check_vector
+        self.check_llm = check_llm
 
-        if not getattr(p, self._match_type)(value):
+    def validate(self, value: string, metadata: Dict) -> ValidationResult:
+        rebuff = None
+        try:
+            rebuff = self.initialize_rebuff()
+        except Exception as e:
+            return FailResult(error_message=str(e))
+
+        detection_result = rebuff.detect_injection(
+            user_input=value,
+            max_heuristic_score=self.max_heuristic_score,
+            max_vector_score=self.max_vector_score,
+            max_model_score=self.max_model_score,
+            check_heuristic=self.check_heuristic,
+            check_vector=self.check_vector,
+            check_llm=self.check_llm,
+        )
+
+        if detection_result.injection_detected:
+            # todo -> add more information when Guardrails creates a structured way to add more information to the error outside of the message
             return FailResult(
-                error_message=f"Result must match {self._regex}",
-                fix_value=self._fix_str,
+                error_message="Prompt injection detected."
             )
         return PassResult()
 
-    def to_prompt(self, with_keywords: bool = True) -> str:
-        return "results should match " + self._regex
+    def initialize_rebuff(self):
+        kwargs = self.get_context_vars_kwargs()
+        openai_api_key = kwargs.get("OPENAI_API_KEY") or os.environ["OPENAI_API_KEY"]
+        pinecone_api_key = kwargs.get("PINECONE_API_KEY") or os.environ["PINECONE_API_KEY"]
+
+        if openai_api_key is None:
+            raise "OPENAI_API_KEY is not set. To use the DetectPromptInjection validator, you must set the OPENAI_API_KEY environment variable or pass it as a keyword argument to the guardrails function."
+        if pinecone_api_key is None:
+            raise "PINECONE_API_KEY is not set. To use the DetectPromptInjection validator, you must set the PINECONE_API_KEY environment variable or pass it as a keyword argument to the guardrails function."
+        
+        rebuff = RebuffSdk(
+            openai_apikey=openai_api_key,
+            pinecone_apikey=pinecone_api_key,
+            pinecone_index=self.pinecone_index,
+        )
+
+        return rebuff
+
+    def get_context_vars_kwargs(self):
+        kwargs = {}
+        context_copy = contextvars.copy_context()
+        for key, context_var in context_copy.items():
+            if key.name == "kwargs" and isinstance(kwargs, dict):
+                kwargs = context_var
+                break
+        return kwargs
+
+    def to_prompt(self) -> str:
+        return ""
