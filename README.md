@@ -14,7 +14,7 @@ This validator detects prompt injection using the Rebuff prompt library.
 # Installation
 
 ```bash
-$ guardrails hub install hub://rebuff/detect_prompt_injection
+$ guardrails hub install hub://guardrails/detect_prompt_injection
 ```
 
 # Usage Examples
