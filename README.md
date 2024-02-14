@@ -1,6 +1,6 @@
 # Overview
 
-| Developed by | Rebuff |
+| Developed by | Guardrails |
 | Date of development | Feb 15, 2024 |
 | Validator type | string |
 | Blog |  |
@@ -9,7 +9,7 @@
 
 # Description
 
-This validator detects prompt injection using the Rebuff prompt library.
+Finds prompt injection using the Rebuff prompt library.
 
 # Installation
 
