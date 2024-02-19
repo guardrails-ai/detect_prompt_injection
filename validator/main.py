@@ -1,5 +1,4 @@
 import contextvars
-import string
 from typing import Callable, Dict, Optional
 import os
 from guardrails.validator_base import (
@@ -55,7 +54,7 @@ class DetectPromptInjection(Validator):
         self.check_vector = check_vector
         self.check_llm = check_llm
 
-    def validate(self, value: string, metadata: Dict) -> ValidationResult:
+    def validate(self, value: str, metadata: Dict = {}) -> ValidationResult:
         rebuff = None
         try:
             rebuff = self.initialize_rebuff()
@@ -85,9 +84,9 @@ class DetectPromptInjection(Validator):
         pinecone_api_key = kwargs.get("PINECONE_API_KEY") or os.environ["PINECONE_API_KEY"]
 
         if openai_api_key is None:
-            raise "OPENAI_API_KEY is not set. To use the DetectPromptInjection validator, you must set the OPENAI_API_KEY environment variable or pass it as a keyword argument to the guardrails function."
+            raise ValueError("OPENAI_API_KEY is not set. To use the DetectPromptInjection validator, you must set the OPENAI_API_KEY environment variable or pass it as a keyword argument to the guardrails function.")
         if pinecone_api_key is None:
-            raise "PINECONE_API_KEY is not set. To use the DetectPromptInjection validator, you must set the PINECONE_API_KEY environment variable or pass it as a keyword argument to the guardrails function."
+            raise ValueError("PINECONE_API_KEY is not set. To use the DetectPromptInjection validator, you must set the PINECONE_API_KEY environment variable or pass it as a keyword argument to the guardrails function.")
         
         rebuff = RebuffSdk(
             openai_apikey=openai_api_key,
@@ -106,5 +105,5 @@ class DetectPromptInjection(Validator):
                 break
         return kwargs
 
-    def to_prompt(self) -> str:
+    def to_prompt(self, with_keywords: bool = True) -> str:
         return ""

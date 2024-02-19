@@ -1,17 +1,15 @@
 [project]
 name = "detect_prompt_injection"
 version = "0.0.0"
-description = "Template repo for Guardrails Hub validators."
+description = "This validator checks for prompt injection using the Rebuff prompt library."
 authors = [
     {name = "Guardrails AI", email = "contact@guardrailsai.com"}
 ]
 license = {file = "LICENSE"}
 readme = "README.md"
-requires-python = ">= 3.8"
+requires-python = ">= 3.8.1"
 dependencies = [
-    "guardrails-ai>=0.3.2",
-    "pydantic>=2.4.2",
-    "pytest",
+    "guardrails-ai>=0.4.0",
     "rebuff"
 ]
 

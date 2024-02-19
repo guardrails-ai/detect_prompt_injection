@@ -2,10 +2,9 @@
 # pytest test/test-validator.py
 
 from guardrails import Guard
-import pytest
 from validator import DetectPromptInjection
 
-from pinecone import Pinecone, ServerlessSpec
+from pinecone import Pinecone
 import os
 
 guard = Guard.from_string(validators=[DetectPromptInjection(
