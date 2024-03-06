@@ -55,7 +55,7 @@ class DetectPromptInjection(Validator):
         self.check_vector = check_vector
         self.check_llm = check_llm
 
-    def validate(self, value: string, metadata: Dict) -> ValidationResult:
+    def validate(self, value: string, metadata: Dict = {}) -> ValidationResult:
         rebuff = None
         try:
             rebuff = self.initialize_rebuff()
@@ -81,18 +81,26 @@ class DetectPromptInjection(Validator):
 
     def initialize_rebuff(self):
         kwargs = self.get_context_vars_kwargs()
-        openai_api_key = kwargs.get("OPENAI_API_KEY") or os.environ["OPENAI_API_KEY"]
-        pinecone_api_key = kwargs.get("PINECONE_API_KEY") or os.environ["PINECONE_API_KEY"]
+        openai_api_key = kwargs.get("OPENAI_API_KEY") 
+        if not openai_api_key:
+            openai_api_key = os.environ.get("OPENAI_API_KEY")
+        pinecone_api_key = kwargs.get("PINECONE_API_KEY")
+        if not pinecone_api_key:
+            pinecone_api_key = os.environ.get("PINECONE_API_KEY")
 
         if openai_api_key is None:
-            raise "OPENAI_API_KEY is not set. To use the DetectPromptInjection validator, you must set the OPENAI_API_KEY environment variable or pass it as a keyword argument to the guardrails function."
+            return FailResult(
+                error_message="OPENAI_API_KEY is not set. To use the DetectPromptInjection validator, you must set the OPENAI_API_KEY environment variable or pass it as a keyword argument to the guardrails function."
+            )
         if pinecone_api_key is None:
-            raise "PINECONE_API_KEY is not set. To use the DetectPromptInjection validator, you must set the PINECONE_API_KEY environment variable or pass it as a keyword argument to the guardrails function."
+            return FailResult(
+                error_message="PINECONE_API_KEY is not set. To use the DetectPromptInjection validator, you must set the PINECONE_API_KEY environment variable or pass it as a keyword argument to the guardrails function."
+            )
         
         rebuff = RebuffSdk(
             openai_apikey=openai_api_key,
             pinecone_apikey=pinecone_api_key,
-            pinecone_index=self.pinecone_index,
+            pinecone_index=self.pinecone_index
         )
 
         return rebuff

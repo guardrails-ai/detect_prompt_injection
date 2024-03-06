@@ -26,11 +26,11 @@ In this example, we’ll test that a user prompt is .
 ```python
 from guardrails import Guard
 
-from validator import DetectPromptInjection
+from guardrails.hub import DetectPromptInjection
 import openai
 
 # create a pinecone index called "detect-prompt-injection" before running this
-guard = Guard.from_string(validators=[]).with_prompt_validation(validators=[DetectPromptInjection(
+guard = Guard().with_prompt_validation(validators=[DetectPromptInjection(
   pinecone_index="detect-prompt-injection",
   on_fail="exception"
 )])

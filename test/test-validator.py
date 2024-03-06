@@ -8,13 +8,12 @@ from validator import DetectPromptInjection
 from pinecone import Pinecone, ServerlessSpec
 import os
 
+# IMPORTANT: Before running these tests,
+# create an index in pinecone named 'detect-prompt-injection'
 guard = Guard.from_string(validators=[DetectPromptInjection(
   pinecone_index="detect-prompt-injection"
 )])
 
-pc = Pinecone(api_key=os.environ['PINECONE_API_KEY'])
-
-# Before running these tests, create an index in pinecone named 'detect-prompt-injection'
 
 def test_pass():
   user_input = "fossils"
